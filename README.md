@@ -2,7 +2,7 @@
   <img src="assets/repository-banner.png" alt="Phyto-Helios Banner" width="100%">
 </p>
 
-# ☀️ Phyto-Helios
+# ☀️ Phototrophism Simulator
 
 Interactive HTML simulator visualizing plant phototropism through directional light sensing, auxin redistribution, and differential growth.
 
