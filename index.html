@@ -76,9 +76,64 @@
   }
   .stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; color: rgba(255,255,255,0.4); margin: 0 0 4px; }
   .stat-card p { font-size: 13px; color: rgba(255,255,255,0.9); line-height: 1.4; margin: 0; }
-  .caption { font-size: 12px; color: rgba(255,255,255,0.4); line-height: 1.5; margin-top: 12px; }
+  .info-card {
+    border: 1px solid rgba(255,255,255,0.1);
+    background: #131519;
+    border-radius: 18px;
+    margin-top: 12px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    overflow: hidden;
+  }
+  .info-card-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    background: transparent;
+    border: none;
+    color: rgba(255,255,255,0.85);
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 14px 16px;
+    cursor: pointer;
+    text-align: left;
+    transition: background 150ms ease;
+  }
+  .info-card-header:hover { background: rgba(255,255,255,0.04); }
+  .info-card-header:focus-visible {
+    outline: 2px solid rgba(140,190,90,0.7);
+    outline-offset: -2px;
+  }
+  .info-card-arrow { transition: transform 350ms ease-in-out; }
+  .info-card[data-expanded="true"] .info-card-arrow { transform: rotate(180deg); }
+  .info-card-panel {
+    display: grid;
+    grid-template-rows: 0fr;
+    opacity: 0;
+    transition: grid-template-rows 350ms ease-in-out, opacity 350ms ease-in-out;
+  }
+  .info-card[data-expanded="true"] .info-card-panel {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+  .info-card-panel-inner { overflow: hidden; }
+  .info-card-body {
+    padding: 0 16px 16px;
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    line-height: 1.55;
+  }
+  .info-card-body p { margin: 0 0 8px; }
+  .info-card-body p:last-child { margin-bottom: 0; }
+  .info-card-body strong { color: rgba(255,255,255,0.85); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) {
+    .info-card-arrow, .info-card-panel, .info-card-header { transition: none; }
+  }
   #sunBGroup { cursor: default; }
   #magnifier { transition: opacity .3s ease; cursor: grab; touch-action: none; }
+  #magLeaderLine { transition: opacity .35s ease; }
   #magnifier.dragging { cursor: grabbing; }
   #magBioText { transition: opacity .35s ease; }
   .dial-panel {
@@ -90,8 +145,11 @@
     padding: 14px;
   }
   .dial-panel p { margin: 0; font-size: 13px; color: rgba(255,255,255,0.75); }
-  #dialKnob { cursor: grab; touch-action: none; }
-  #dialKnob.dragging { cursor: grabbing; }
+  #dialKnob { cursor: grab; touch-action: none; transition: filter 150ms ease; }
+  #dialKnob:hover { filter: drop-shadow(0 0 4px rgba(255,217,102,0.55)); }
+  #dialKnob.dragging { cursor: grabbing; filter: drop-shadow(0 0 7px rgba(255,217,102,0.8)); }
+  #dialSvg { touch-action: none; }
+  #dialSvg:hover #dialFace { stroke: rgba(255,217,102,0.35); }
   .dial-readout { font-size: 15px; font-weight: 600; color: #ffd966; font-variant-numeric: tabular-nums; min-width: 46px; text-align: right; }
 </style>
 </head>
@@ -178,6 +236,23 @@
           <stop offset="60%" stop-color="rgba(190,35,30,0.32)"></stop>
           <stop offset="100%" stop-color="rgba(190,35,30,0)"></stop>
         </radialGradient>
+        <linearGradient id="coleoptileGrad0" x1="0" y1="0" x2="1" y2="0.3">
+          <stop offset="0%" stop-color="#6f8d5c" /><stop offset="100%" stop-color="#465c37" />
+        </linearGradient>
+        <linearGradient id="coleoptileGrad1" x1="0" y1="0" x2="1" y2="0.3">
+          <stop offset="0%" stop-color="#82a56a" /><stop offset="100%" stop-color="#597246" />
+        </linearGradient>
+        <linearGradient id="coleoptileGrad2" x1="0" y1="0" x2="1" y2="0.3">
+          <stop offset="0%" stop-color="#9bc17f" /><stop offset="100%" stop-color="#6d8a54" />
+        </linearGradient>
+        <linearGradient id="rootGrad" x1="0" y1="0" x2="1" y2="0.3">
+          <stop offset="0%" stop-color="#dcc294" /><stop offset="100%" stop-color="#a68a5c" />
+        </linearGradient>
+        <radialGradient id="shadowGrad" cx="50%" cy="35%" r="65%">
+          <stop offset="0%" stop-color="rgba(10,12,8,0.38)"></stop>
+          <stop offset="70%" stop-color="rgba(10,12,8,0.18)"></stop>
+          <stop offset="100%" stop-color="rgba(10,12,8,0)"></stop>
+        </radialGradient>
         <clipPath id="lensClip"><circle cx="0" cy="0" r="156"></circle></clipPath>
         <!-- Generous safety-net clip verified against the true worst-case mesh
              reach at MAX_CURL_DEG=50 in either curl direction — not a tight fit. -->
@@ -211,8 +286,10 @@
       <text x="660" y="472" text-anchor="middle" font-size="14" font-weight="600" fill="rgba(255,255,255,0.85)">Right Pot</text>
       <text x="660" y="490" text-anchor="middle" font-size="12" fill="rgba(255,255,255,0.45)">(Sun B — adjustable)</text>
 
+      <line id="magLeaderLine" stroke="rgba(200,225,180,0.55)" stroke-width="1.6" stroke-dasharray="5 4" stroke-linecap="round" opacity="0"></line>
+
       <g id="magnifier" opacity="0" style="display:none;">
-        <line id="magHandle" x1="114" y1="114" x2="209" y2="209" stroke="#c9c9c9" stroke-width="11" stroke-linecap="round"></line>
+        <line x1="114" y1="114" x2="209" y2="209" stroke="#c9c9c9" stroke-width="11" stroke-linecap="round"></line>
         <line x1="114" y1="114" x2="209" y2="209" stroke="rgba(0,0,0,0.35)" stroke-width="11" stroke-linecap="round" transform="translate(0,2)"></line>
         <circle r="164" fill="url(#lensGlass)" filter="url(#lensShadow)"></circle>
         <g clip-path="url(#lensClip)">
@@ -222,7 +299,6 @@
             <ellipse id="magRedZone" cx="0" cy="0" rx="0" ry="0" fill="url(#auxinRedZone)"></ellipse>
             <g id="magParticles"></g>
           </g>
-          <rect id="magTint" x="-138" y="-64" width="272" height="128" fill="transparent" opacity="0"></rect>
         </g>
         <circle r="156" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="4"></circle>
         <circle r="156" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="1" transform="translate(1.2,1.2)"></circle>
@@ -268,18 +344,19 @@
     </button>
     <div class="slider-row">
       <svg class="mini-icon" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="rgba(255,255,255,0.5)" stroke-width="1.6"></circle><path d="M12 7v5l3.5 2" stroke="rgba(255,255,255,0.5)" stroke-width="1.6" stroke-linecap="round"></path></svg>
-      <input type="range" id="hoursSlider" min="0" max="72" step="0.1" value="0" />
+      <input type="range" id="hoursSlider" min="0" max="250" step="0.1" value="0" />
       <span class="readout" id="hoursReadout">t = 0h</span>
     </div>
   </div>
 
   <div class="dial-panel">
     <svg id="dialSvg" viewBox="0 0 120 120" style="width:96px;height:96px;flex-shrink:0;">
-      <circle cx="60" cy="60" r="52" fill="#1a1d24" stroke="rgba(255,255,255,0.15)" stroke-width="2"></circle>
-      <g id="dialTicks" stroke="rgba(255,255,255,0.22)" stroke-width="2"></g>
+      <circle id="dialFace" cx="60" cy="60" r="52" fill="#1a1d24" stroke="rgba(255,255,255,0.15)" stroke-width="2" style="transition: stroke 150ms ease;"></circle>
+      <path id="dialRangeArc" fill="none" stroke="rgba(255,217,102,0.28)" stroke-width="3" stroke-linecap="round"></path>
+      <g id="dialTicks"></g>
       <g id="dialKnob">
         <circle cx="60" cy="60" r="52" fill="transparent"></circle>
-        <line id="dialPointer" x1="60" y1="60" x2="60" y2="20" stroke="#ffd966" stroke-width="3" stroke-linecap="round"></line>
+        <line x1="60" y1="60" x2="60" y2="20" stroke="#ffd966" stroke-width="3" stroke-linecap="round"></line>
         <circle cx="60" cy="60" r="5" fill="#ffd966"></circle>
         <circle cx="60" cy="14" r="6.5" fill="url(#sunCoreGrad)" stroke="#ffc93c" stroke-width="1"></circle>
         <g stroke="#ffd966" stroke-width="1.4" stroke-linecap="round">
@@ -306,7 +383,20 @@
     </div>
   </div>
 
-  <p class="caption">Positive phototropism: the coleoptile bends toward unilateral light. Auxin (IAA) made at the tip migrates to the shaded side, which elongates more than the lit side, pushing the tip toward the light — the classic Cholodny-Went mechanism from Darwin's and Went's coleoptile experiments. The wall keeps each pot lit by only its own sun, so the two demonstrations don't interfere.</p>
+  <div class="info-card" id="mechanismCard" data-expanded="false">
+    <button class="info-card-header" id="mechanismCardToggle" aria-expanded="false" aria-controls="mechanismCardContent">
+      <span class="info-card-title">Mechanism</span>
+      <svg class="mini-icon info-card-arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"></path></svg>
+    </button>
+    <div class="info-card-panel">
+      <div class="info-card-panel-inner">
+        <div class="info-card-body" id="mechanismCardContent" role="region" aria-labelledby="mechanismCardToggle">
+          <p><strong>Positive Phototropism (Cholodny&ndash;Went Mechanism)</strong></p>
+          <p>Auxin (IAA) is produced at the coleoptile tip. When light strikes from one side, auxin redistributes to the shaded side, where it promotes greater cell elongation. This unequal growth causes the shoot to bend <strong>towards the light</strong>.</p>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -381,10 +471,10 @@ const leftX = 240, rightX = 660;
    the response builds up — but the target here is recomputed live from
    the sun's actual position every render, not a fixed constant.
    ----------------------------------------------------------------------- */
-const SHOOT_RATE = 1.35;  // px of new growth per hour
-const PHOTO_TAU  = 12;    // hours for the phototropic response to build up
-const LAG_H      = 1.5;   // hours before the tip's auxin response begins
-const MAX_BEND   = 50;    // degrees, hard cap regardless of how extreme the sun angle is
+const SHOOT_RATE = 0.3888; // px of new growth per hour
+const PHOTO_TAU  = 41.67;  // hours for the phototropic response to build up
+const LAG_H      = 5.21;   // hours before the tip's auxin response begins
+const MAX_BEND   = 55;    // degrees, hard cap regardless of how extreme the sun angle is
 const STEPS      = 90;
 
 function clampToMaxBend(angleDeg) {
@@ -456,10 +546,23 @@ function potInnerSVG(cx, soilGradId) {
   `;
 }
 
+// Soft shadow on the soil surface, shifted opposite the sun's angle —
+// self-contained and purely additive, doesn't read or alter anything
+// used by the growth/magnifier/auxin systems. Offset capped well
+// inside the soil's own visible width (verified ~19px margin at the
+// most extreme angle) so it can never visually escape the pot.
+function shadowMarkup(cx, angleDeg) {
+  const SHADOW_MAX_OFFSET = 38, SHADOW_RX = 30, SHADOW_RY = 9;
+  const offsetX = -Math.sin(toRad(angleDeg)) * SHADOW_MAX_OFFSET;
+  const soilTopY = groundY - soilDepth;
+  const shadowCx = cx + offsetX;
+  const shadowCy = soilTopY + 3;
+  return `<ellipse cx="${shadowCx.toFixed(1)}" cy="${shadowCy.toFixed(1)}" rx="${SHADOW_RX}" ry="${SHADOW_RY}" fill="url(#shadowGrad)"></ellipse>`;
+}
+
 // Muted (early growth, before the response had built up) -> vivid (newer
 // growth near the tip) — same reinforcing cue as the sibling builds.
-const COLEOPTILE_BAND_COLORS = ["#5f7a4c", "#6f8d58", "#84a769"];
-
+const COLEOPTILE_GRADS = ["url(#coleoptileGrad0)", "url(#coleoptileGrad1)", "url(#coleoptileGrad2)"];
 function coleoptileMarkup(pts) {
   // Blunter taper than a leafy shoot — real coleoptiles have a rounded
   // growing tip, not a pointed one.
@@ -472,21 +575,77 @@ function coleoptileMarkup(pts) {
     if (end - start < 1) continue;
     const segPts = pts.slice(start, end + 1);
     const segWidths = widths.slice(start, end + 1);
-    bands += `<path d="${ribbonPath(segPts, segWidths)}" fill="${COLEOPTILE_BAND_COLORS[i]}" stroke="rgba(0,0,0,0.12)" stroke-width="0.5"></path>`;
+    bands += `<path d="${ribbonPath(segPts, segWidths)}" fill="${COLEOPTILE_GRADS[i]}" stroke="rgba(35,55,20,0.3)" stroke-width="0.5"></path>`;
   }
   const tip = pts[pts.length - 1];
+  const prev = pts[Math.max(0, pts.length - 4)];
+  const dirX = tip.x - prev.x, dirY = tip.y - prev.y;
+  const dirLen = Math.hypot(dirX, dirY) || 1;
+  const ux = dirX / dirLen, uy = dirY / dirLen;
+  // A small first-leaf tip just beginning to emerge from the growing
+  // point — real coleoptiles are a protective sheath around the first
+  // true leaf, which pokes through as the coleoptile matures.
+  const leafLen = 4.5, leafW = 1.6;
+  const leafTipX = tip.x + ux * leafLen, leafTipY = tip.y + uy * leafLen;
+  const perpX = -uy * leafW, perpY = ux * leafW;
+  const leafPath = `M ${(tip.x + perpX * 0.4).toFixed(1)} ${(tip.y + perpY * 0.4).toFixed(1)} Q ${(tip.x + ux * leafLen * 0.6 + perpX).toFixed(1)} ${(tip.y + uy * leafLen * 0.6 + perpY).toFixed(1)} ${leafTipX.toFixed(1)} ${leafTipY.toFixed(1)} Q ${(tip.x + ux * leafLen * 0.6 - perpX).toFixed(1)} ${(tip.y + uy * leafLen * 0.6 - perpY).toFixed(1)} ${(tip.x - perpX * 0.4).toFixed(1)} ${(tip.y - perpY * 0.4).toFixed(1)} Z`;
   return `
     ${bands}
+    <path d="${leafPath}" fill="#9bc17f" stroke="rgba(35,55,20,0.35)" stroke-width="0.4"></path>
     <ellipse cx="${tip.x.toFixed(1)}" cy="${tip.y.toFixed(1)}" rx="2.6" ry="2.2" fill="#8fb56e" opacity="0.9"></ellipse>
   `;
 }
 
-const ROOT_RATE = 1.2;
+const ROOT_RATE = 0.3456;
 function rootMarkup(pts) {
   const widths = taperWidths(pts.length, 6, 1.2);
   const tip = pts[pts.length - 1];
+  const n = pts.length;
+
+  let totalLen = 0;
+  for (let i = 1; i < n; i++) totalLen += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
+
+  // Lateral roots branching off the main taproot — angled off its local
+  // direction at each attachment point, length capped so they never
+  // look larger than a real lateral root should relative to the main
+  // root as it's still growing.
+  let laterals = "";
+  [0.32, 0.55, 0.78].forEach((frac, idx) => {
+    const ptIdx = Math.floor(frac * (n - 1));
+    if (ptIdx < 3 || ptIdx >= n - 1) return;
+    const p = pts[ptIdx];
+    const prev = pts[Math.max(0, ptIdx - 3)];
+    const dx = p.x - prev.x, dy = p.y - prev.y;
+    const dirLen = Math.hypot(dx, dy) || 1;
+    const ux = dx / dirLen, uy = dy / dirLen;
+    const side = idx % 2 === 0 ? 1 : -1;
+    const angleOffset = toRad(32 * side);
+    const rux = ux * Math.cos(angleOffset) - uy * Math.sin(angleOffset);
+    const ruy = ux * Math.sin(angleOffset) + uy * Math.cos(angleOffset);
+    const lateralLen = Math.min(11, totalLen * 0.2);
+    if (lateralLen < 1.5) return; // too small to bother drawing yet
+    const endX = p.x + rux * lateralLen, endY = p.y + ruy * lateralLen;
+    const midX = p.x + rux * lateralLen * 0.5, midY = p.y + ruy * lateralLen * 0.5;
+    laterals += `<path d="M ${p.x.toFixed(1)} ${p.y.toFixed(1)} Q ${midX.toFixed(1)} ${midY.toFixed(1)} ${endX.toFixed(1)} ${endY.toFixed(1)}" stroke="url(#rootGrad)" stroke-width="1.4" fill="none" stroke-linecap="round"></path>`;
+  });
+
+  // Fine root hairs near the tip, where absorption actually happens.
+  let hairs = "";
+  for (let i = Math.floor(n * 0.6); i < n; i += 4) {
+    const p = pts[i];
+    const prev = pts[Math.max(0, i - 2)];
+    const dx = p.x - prev.x, dy = p.y - prev.y;
+    const dl = Math.hypot(dx, dy) || 1;
+    const nx = -dy / dl, ny = dx / dl;
+    const hairLen = 1.8;
+    hairs += `<line x1="${(p.x + nx).toFixed(1)}" y1="${(p.y + ny).toFixed(1)}" x2="${(p.x + nx * (1 + hairLen)).toFixed(1)}" y2="${(p.y + ny * (1 + hairLen)).toFixed(1)}" stroke="rgba(180,150,100,0.4)" stroke-width="0.4"></line>`;
+    hairs += `<line x1="${(p.x - nx).toFixed(1)}" y1="${(p.y - ny).toFixed(1)}" x2="${(p.x - nx * (1 + hairLen)).toFixed(1)}" y2="${(p.y - ny * (1 + hairLen)).toFixed(1)}" stroke="rgba(180,150,100,0.4)" stroke-width="0.4"></line>`;
+  }
+
   return `
-    <path d="${ribbonPath(pts, widths)}" fill="#c4a876" stroke="rgba(0,0,0,0.15)" stroke-width="0.6"></path>
+    ${laterals}
+    <path d="${ribbonPath(pts, widths)}" fill="url(#rootGrad)" stroke="rgba(70,55,30,0.35)" stroke-width="0.6"></path>
+    ${hairs}
     <ellipse cx="${tip.x.toFixed(1)}" cy="${tip.y.toFixed(1)}" rx="2.2" ry="1.5" fill="#8a6f4a" opacity="0.85"></ellipse>
   `;
 }
@@ -505,6 +664,16 @@ function rootMarkup(pts) {
    simplified analogy used for hydrotropism.
    ========================================================================= */
 const TIP_RX = 110, TIP_RY = 56;
+// Separate, larger bounds for the active-state safety clamp — the
+// mesh's real edge points (now the auxin's actual target, not an
+// abstract bias) reach up to ~135x67 at full bend, which the original
+// TIP_RX/TIP_RY (sized for the old system) was too small to contain,
+// causing the clamp to cap particles well before stim reached 1.0.
+// Verified these stay under 0.86 clamp-ratio (never triggers early)
+// and under the 156 lens radius across the full bend range — re-checked
+// after MAX_BEND moved from 50 to 55, reach barely changed so no
+// further adjustment was needed.
+const AUXIN_CLAMP_RX = 200, AUXIN_CLAMP_RY = 105;
 const MAG_PARTICLE_COUNT = 34;
 const MAG_TIP_THRESHOLD  = 198;
 const LEFT_MESH_X = -134, TIP_MESH_X = 118, MESH_HALF_H = 60, RIGID_BOUNDARY_X = 33;
@@ -519,6 +688,7 @@ const FILL_UPPER = ["#7a9c5c", "#84a769"];
 const FILL_LOWER = ["#6a8a50", "#749760"];
 
 let CELL_PATHS = [];
+let boostedEdgePts = []; // outer boundary of whichever side is currently elongating — auxin targets these directly
 let magX = 150, magY = 150, magScale = 1, magDragging = false, magAnimId = null;
 let tipPositions = {};
 const magParticles = [];
@@ -532,12 +702,11 @@ function initCellGrid() {
   const nCols = RIGID_STEPS + CURL_STEPS;
   for (let r = 0; r < N_UPPER + N_LOWER; r++) {
     for (let c = 0; c < nCols; c++) {
-      const el = document.createElementNS(NS, "path");
+      const el = document.createElementNS(NS, "rect");
       const isUpper = r < N_UPPER;
       el.setAttribute("fill", isUpper ? FILL_UPPER[c % 2] : FILL_LOWER[c % 2]);
-      el.setAttribute("stroke", "rgba(30,40,20,0.35)");
-      el.setAttribute("stroke-width", "0.75");
-      el.setAttribute("stroke-linejoin", "round");
+      el.setAttribute("stroke", "rgba(30,40,20,0.5)");
+      el.setAttribute("stroke-width", "0.6");
       g.appendChild(el);
       CELL_PATHS.push({ el, col: c, row: r });
     }
@@ -588,6 +757,14 @@ function updateCellGrid(stim, curlAngle, boostUpper) {
     }
   }
 
+  // Outer edge of the elongating side, from the curl/tip zone onward
+  // (skipping the still-rigid base) — the actual cell boundary the
+  // auxin is stimulating, not an abstract shape unrelated to the mesh.
+  boostedEdgePts = [];
+  for (let i = RIGID_STEPS; i < M; i++) {
+    boostedEdgePts.push(boostUpper ? upperB[N_UPPER][i] : lowerB[N_LOWER][i]);
+  }
+
   CELL_PATHS.forEach(({ el, row, col }) => {
     let p1, p2, p3, p4;
     if (row < N_UPPER) {
@@ -599,12 +776,25 @@ function updateCellGrid(stim, curlAngle, boostUpper) {
       p1 = lowerB[r][col];       p2 = lowerB[r][col + 1];
       p3 = lowerB[r + 1][col + 1]; p4 = lowerB[r + 1][col];
     }
-    el.setAttribute("d",
-      `M${p1.x.toFixed(2)},${p1.y.toFixed(2)}` +
-      `L${p2.x.toFixed(2)},${p2.y.toFixed(2)}` +
-      `L${p3.x.toFixed(2)},${p3.y.toFixed(2)}` +
-      `L${p4.x.toFixed(2)},${p4.y.toFixed(2)}Z`
-    );
+    // Rounded rect centered on the quad's centroid, sized/oriented from
+    // the same corner points — biologically closer to real plant cells
+    // than sharp-cornered quads. Same technique used on the hydrotropism
+    // magnifier.
+    const cx = (p1.x + p2.x + p3.x + p4.x) / 4, cy = (p1.y + p2.y + p3.y + p4.y) / 4;
+    const wx = p2.x - p1.x, wy = p2.y - p1.y;
+    const hx = p4.x - p1.x, hy = p4.y - p1.y;
+    const width = Math.hypot(wx, wy), height = Math.hypot(hx, hy);
+    const angleDeg = (Math.atan2(wy, wx) * 180) / Math.PI;
+    const shrink = 0.86;
+    const rectW = width * shrink, rectH = height * shrink;
+    const corner = Math.min(rectW, rectH) * 0.28;
+    el.setAttribute("x", (-rectW / 2).toFixed(2));
+    el.setAttribute("y", (-rectH / 2).toFixed(2));
+    el.setAttribute("width", rectW.toFixed(2));
+    el.setAttribute("height", rectH.toFixed(2));
+    el.setAttribute("rx", corner.toFixed(2));
+    el.setAttribute("ry", corner.toFixed(2));
+    el.setAttribute("transform", `translate(${cx.toFixed(2)} ${cy.toFixed(2)}) rotate(${angleDeg.toFixed(1)})`);
   });
 }
 
@@ -616,7 +806,7 @@ function updateCellGrid(stim, curlAngle, boostUpper) {
    extent can reach the wall even at the angle cap.
    ----------------------------------------------------------------------- */
 const SUN_ARC_RADIUS = 150;
-const SUN_ANGLE_CAP  = 80;   // degrees either side — verified to keep 60px+ clearance from the wall
+const SUN_ANGLE_CAP  = 55;   // degrees either side — matches MAX_BEND directly now (previously 80, giving a 30deg dead zone beyond the bend cap)
 const SUN_A_ANGLE    = 0;    // fixed — directly overhead, straight down to the plant
 let sunBAngleDeg = 22;       // dial-controlled — the sun's own position follows this instantly
 let effectiveTargetBendRight = clampToMaxBend(sunBAngleDeg); // the PLANT's response — eases toward the clamped goal over real time, not instant
@@ -694,7 +884,8 @@ function positionSuns(soilSurfaceY) {
    ----------------------------------------------------------------------- */
 let hoursState = 0;
 let playing = false, playStart = 0, playRAF = null;
-const PLAY_DURATION_MS = 22000;
+const PLAY_DURATION_MS = 26000; // slightly longer than before, matching the slower pace of the extended range
+const MAX_HOURS = 250;
 
 function initMagParticles() {
   magParticles.length = 0;
@@ -713,7 +904,6 @@ function initMagParticles() {
       x: Math.cos(a) * TIP_RX * r,
       y: Math.sin(a) * TIP_RY * r,
       vx: 0, vy: 0,
-      biasFactor: 0.6 + Math.random() * 0.8,
       el,
     });
   }
@@ -739,6 +929,8 @@ function setMagScale(delta) {
 }
 
 let magOrganMatch = null;
+let lockedOrganKey = null; // once locked onto an organ, stay on it as it moves from its own bending — only drop the lock if the magnifier itself moves away
+let magMatchedPoint = null;
 let redZoneX = 0, redZoneY = 0;
 
 function updateMagLabel() {
@@ -748,29 +940,62 @@ function updateMagLabel() {
     { key: "leftColeoptile",  name: "Coleoptile Tip", pot: "left"  },
     { key: "rightColeoptile", name: "Coleoptile Tip", pot: "right" },
   ];
-  let best = null, bestDist = Infinity;
+  const labelEl = document.getElementById("magLabelText");
+
+  // Sticky lock: if already locked onto an organ, keep tracking that
+  // SAME organ's tip precisely as long as it's still within range —
+  // regardless of how far its own bending has moved it — rather than
+  // re-picking whichever organ happens to be nearest every frame. The
+  // lock only releases if the magnifier itself is dragged far enough
+  // that even the locked organ falls outside the threshold.
+  if (lockedOrganKey) {
+    const locked = candidates.find((c) => c.key === lockedOrganKey);
+    const p = locked && tipPositions[locked.key];
+    if (p) {
+      const d = Math.hypot(p.x - magX, p.y - magY);
+      if (d < MAG_TIP_THRESHOLD) {
+        labelEl.textContent = locked.name;
+        magOrganMatch = locked;
+        magMatchedPoint = p;
+        return;
+      }
+    }
+    lockedOrganKey = null; // locked organ moved out of range or vanished — fall through to re-search
+  }
+
+  let best = null, bestDist = Infinity, bestPoint = null;
   candidates.forEach((c) => {
     const p = tipPositions[c.key];
     if (!p) return;
     const d = Math.hypot(p.x - magX, p.y - magY);
-    if (d < bestDist) { bestDist = d; best = c; }
+    if (d < bestDist) { bestDist = d; best = c; bestPoint = p; }
   });
-  const labelEl = document.getElementById("magLabelText");
-  const tintEl  = document.getElementById("magTint");
   if (best && bestDist < MAG_TIP_THRESHOLD) {
     labelEl.textContent = best.name;
-    tintEl.setAttribute("fill", "rgba(122,156,92,0.16)");
-    tintEl.setAttribute("opacity", "1");
     magOrganMatch = best;
+    magMatchedPoint = bestPoint;
+    lockedOrganKey = best.key;
   } else {
     labelEl.textContent = "";
-    tintEl.setAttribute("opacity", "0");
     magOrganMatch = null;
+    magMatchedPoint = null;
+    lockedOrganKey = null;
   }
 }
 
 function stepMagnifier() {
   updateMagLabel();
+
+  const leaderEl = document.getElementById("magLeaderLine");
+  if (magOrganMatch && magMatchedPoint) {
+    leaderEl.setAttribute("x1", magX.toFixed(1));
+    leaderEl.setAttribute("y1", magY.toFixed(1));
+    leaderEl.setAttribute("x2", magMatchedPoint.x.toFixed(1));
+    leaderEl.setAttribute("y2", magMatchedPoint.y.toFixed(1));
+    leaderEl.setAttribute("opacity", "1");
+  } else {
+    leaderEl.setAttribute("opacity", "0");
+  }
 
   const isLeftColeoptile  = magOrganMatch && magOrganMatch.key === "leftColeoptile";
   const isRightColeoptile = magOrganMatch && magOrganMatch.key === "rightColeoptile";
@@ -784,24 +1009,33 @@ function stepMagnifier() {
   const boostUpper = rawBend > 0; // shaded side maps to local-upper when bending right, local-lower when bending left
 
   updateCellGrid(stim, curlAngle, boostUpper);
-  document.getElementById("magMeshOrient").setAttribute("transform", magOrganMatch ? "rotate(-90)" : "");
+  document.getElementById("magMeshOrient").setAttribute("transform", "rotate(-90)");
 
-  // Auxin particles — bias toward the SHADED side, which flips with the
-  // bend direction (unlike the sibling builds, where it's always fixed).
-  // No bias at all below the angle threshold — this is what makes the
-  // particles visibly re-center when the sun swings back near overhead.
-  const biasDir = stim > 0 ? (rawBend > 0 ? -1 : 1) : 0;
-  const bias = 0.11 * stim * biasDir;
-  const springK = 0.0035 + 0.007 * (1 - stim);
+  // Auxin particles now target the ACTUAL outer edge of whichever cells
+  // are currently elongating (boostedEdgePts, captured fresh from the
+  // mesh above) rather than drifting toward an abstract bias direction
+  // inside an unrelated fixed ellipse — the migration should visibly
+  // land ON specific cells, not just shift a vague cloud sideways.
+  // Below the threshold, particles have no target and simply re-center.
+  // Target position scales proportionally with stim (itself already
+  // degrees-of-bend / MAX_BEND) — a slight bend should only migrate the
+  // auxin partway toward the edge, not snap it all the way there the
+  // instant the threshold is crossed. At stim=0 this naturally lands
+  // back at center with no special-casing needed.
+  const springK = stim > 0 ? 0.08 : 0.006; // fast enough to track the mesh's instant boostUpper flips on direction change, not lagging behind them
+  const EDGE_INSET = 0.82; // keeps auxin visibly inside the coleoptile's own outer edge rather than sitting right on it, where jitter could push particles past the boundary
   let sumX = 0, sumY = 0;
-  magParticles.forEach((p) => {
-    p.vx += (Math.random() - 0.5) * 0.55 - p.x * springK;
-    p.vy += (Math.random() - 0.5) * 0.55 - p.y * springK + bias * p.biasFactor;
+  magParticles.forEach((p, idx) => {
+    const edge = boostedEdgePts.length ? boostedEdgePts[idx % boostedEdgePts.length] : { x: 0, y: 0 };
+    const targetX = edge.x * stim * EDGE_INSET;
+    const targetY = edge.y * stim * EDGE_INSET;
+    p.vx += (Math.random() - 0.5) * 0.4 + (targetX - p.x) * springK;
+    p.vy += (Math.random() - 0.5) * 0.4 + (targetY - p.y) * springK;
     p.vx *= 0.88; p.vy *= 0.88;
     p.x += p.vx; p.y += p.vy;
-    const nx = p.x / TIP_RX, ny = p.y / TIP_RY;
+    const nx = p.x / AUXIN_CLAMP_RX, ny = p.y / AUXIN_CLAMP_RY;
     const d = Math.hypot(nx, ny);
-    if (d > 0.96) { const s = 0.96 / d; p.x *= s; p.y *= s; p.vx *= -0.55; p.vy *= -0.55; }
+    if (d > 0.98) { const s = 0.98 / d; p.x *= s; p.y *= s; p.vx *= -0.4; p.vy *= -0.4; }
     p.el.setAttribute("cx", p.x.toFixed(1));
     p.el.setAttribute("cy", p.y.toFixed(1));
     sumX += p.x; sumY += p.y;
@@ -875,11 +1109,13 @@ function render() {
 
   document.getElementById("leftScene").innerHTML = `
     ${potInnerSVG(leftX, "soilGradUniform")}
+    ${shadowMarkup(leftX, SUN_A_ANGLE)}
     ${rootMarkup(leftRoot.pts)}
     ${coleoptileMarkup(leftColeoptile.pts)}
   `;
   document.getElementById("rightScene").innerHTML = `
     ${potInnerSVG(rightX, "soilGradUniform")}
+    ${shadowMarkup(rightX, sunBAngleDeg)}
     ${rootMarkup(rightRoot.pts)}
     ${coleoptileMarkup(rightColeoptile.pts)}
   `;
@@ -904,9 +1140,9 @@ function render() {
 
 function playFrame(now) {
   const elapsed = now - playStart;
-  hoursState = Math.min(72, (elapsed / PLAY_DURATION_MS) * 72);
+  hoursState = Math.min(MAX_HOURS, (elapsed / PLAY_DURATION_MS) * MAX_HOURS);
   render();
-  if (hoursState < 72) {
+  if (hoursState < MAX_HOURS) {
     playRAF = requestAnimationFrame(playFrame);
   } else {
     playing = false;
@@ -916,7 +1152,7 @@ function playFrame(now) {
 
 function startPlay() {
   playing = true;
-  playStart = performance.now() - (hoursState / 72) * PLAY_DURATION_MS;
+  playStart = performance.now() - (hoursState / MAX_HOURS) * PLAY_DURATION_MS;
   document.getElementById("playBtn").classList.add("active");
   playRAF = requestAnimationFrame(playFrame);
 }
@@ -934,6 +1170,18 @@ document.getElementById("playBtn").addEventListener("click", () => {
 document.getElementById("resetBtn").addEventListener("click", () => {
   stopPlay();
   hoursState = 0;
+  sunBAngleDeg = 0;
+  effectiveTargetBendRight = 0; // snap the plant's eased response too, not just the dial — otherwise it would still show the old bend while easing back
+  updateDialVisual();
+  setMagnifier(false);
+  magX = 150; magY = 150; magScale = 1;
+  lockedOrganKey = null;
+  magOrganMatch = null;
+  magMatchedPoint = null;
+  document.getElementById("magLeaderLine").setAttribute("opacity", "0"); // the magnifier's step loop stops once hidden, so nothing else would clear this
+  document.getElementById("magLabelText").textContent = "";
+  clampMagPosition();
+  positionMagnifier();
   render();
   document.getElementById("resetBtn").classList.add("pulse");
   setTimeout(() => document.getElementById("resetBtn").classList.remove("pulse"), 650);
@@ -954,14 +1202,40 @@ function toPointIn(svgId, evt) {
 }
 
 function buildDialTicks() {
+  // Range-arc drawn as sampled line segments rather than a single SVG
+  // arc command — avoids any risk of getting the sweep-flag backwards
+  // and having it draw the long way around through the bottom.
+  const arcHost = document.getElementById("dialRangeArc");
+  const arcR = 52;
+  let arcD = "";
+  for (let deg = -SUN_ANGLE_CAP; deg <= SUN_ANGLE_CAP; deg += 2) {
+    const rad = toRad(deg);
+    const x = 60 + Math.sin(rad) * arcR, y = 60 - Math.cos(rad) * arcR;
+    arcD += (deg === -SUN_ANGLE_CAP ? "M" : "L") + x.toFixed(1) + " " + y.toFixed(1) + " ";
+  }
+  arcHost.setAttribute("d", arcD.trim());
+
   const host = document.getElementById("dialTicks");
   let html = "";
-  [-80, -40, 0, 40, 80].forEach((deg) => {
+  // Minor ticks at the quarter points, subtle
+  [-SUN_ANGLE_CAP * 0.75, -SUN_ANGLE_CAP * 0.25, SUN_ANGLE_CAP * 0.25, SUN_ANGLE_CAP * 0.75].forEach((deg) => {
     const rad = toRad(deg);
-    const r1 = 44, r2 = 52;
-    const x1 = 60 + Math.sin(rad) * r1, y1 = 60 - Math.cos(rad) * r1;
-    const x2 = 60 + Math.sin(rad) * r2, y2 = 60 - Math.cos(rad) * r2;
-    html += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}"></line>`;
+    const x1 = 60 + Math.sin(rad) * 46, y1 = 60 - Math.cos(rad) * 46;
+    const x2 = 60 + Math.sin(rad) * 52, y2 = 60 - Math.cos(rad) * 52;
+    html += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="rgba(255,255,255,0.2)" stroke-width="1.5"></line>`;
+  });
+  // Major ticks: center (0) and both extremes — extremes get the
+  // accent color, bolder stroke, and their own numeric label so the
+  // maximum adjustable value is unmistakable at a glance.
+  [-SUN_ANGLE_CAP, 0, SUN_ANGLE_CAP].forEach((deg) => {
+    const isExtreme = Math.abs(deg) === SUN_ANGLE_CAP;
+    const rad = toRad(deg);
+    const x1 = 60 + Math.sin(rad) * 40, y1 = 60 - Math.cos(rad) * 40;
+    const x2 = 60 + Math.sin(rad) * 52, y2 = 60 - Math.cos(rad) * 52;
+    const color = isExtreme ? "#ffd966" : "rgba(255,255,255,0.5)";
+    html += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="${color}" stroke-width="${isExtreme ? 2.5 : 2}"></line>`;
+    const lx = 60 + Math.sin(rad) * 34, ly = 60 - Math.cos(rad) * 34;
+    html += `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="7.5" font-weight="${isExtreme ? 700 : 500}" fill="${color}">${deg}°</text>`;
   });
   host.innerHTML = html;
 }
@@ -1007,6 +1281,13 @@ updateDialVisual();
 document.getElementById("magBtn").addEventListener("click", () => setMagnifier(!magnifierOn));
 document.getElementById("magScaleDownBtn").addEventListener("click", () => setMagScale(-0.15));
 document.getElementById("magScaleUpBtn").addEventListener("click", () => setMagScale(0.15));
+
+document.getElementById("mechanismCardToggle").addEventListener("click", () => {
+  const card = document.getElementById("mechanismCard");
+  const expanded = card.getAttribute("data-expanded") === "true";
+  card.setAttribute("data-expanded", (!expanded).toString());
+  document.getElementById("mechanismCardToggle").setAttribute("aria-expanded", (!expanded).toString());
+});
 
 (function setupMagnifierDrag() {
   const mag = document.getElementById("magnifier");
